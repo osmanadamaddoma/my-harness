@@ -1,2 +1,3 @@
-# my-harness-engineering - no external deps, stdlib only
-# physics_engine uses math + re only
+streamlit
+matplotlib
+reportlab
