@@ -41,3 +41,6 @@ typer>=0.9.0
 rich>=13.7.0
 # 10. التسجيل والتقارير
 loguru>=0.7.0
+streamlit
+matplotlib
+reportlab
