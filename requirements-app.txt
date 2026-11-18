@@ -1,0 +1,43 @@
+my-harness
+Repository navigation
+Code
+Issues
+Pull requests
+my-harness
+/requirements.txt
+osmanadamaddoma
+osmanadamaddoma
+yesterday
+28 lines (27 loc) · 635 Bytes
+
+Code
+
+Blame
+# Verify-First Agent - 15 Libraries
+# Python >= 3.8
+
+# 1. الاختبارات
+pytest>=7.4.0
+# 2. جلب الأدلة من الإنترنت
+requests>=2.31.0
+httpx>=0.25.0
+# 3. التحقق من البيانات
+pydantic>=2.5.0
+# 4. واجهة API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+# 5. متغيرات البيئة
+python-dotenv>=1.0.0
+# 6. قراءة صفحات الويب
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+# 7. تحليل البيانات
+numpy>=1.26.0
+pandas>=2.1.0
+# 8. حساب التشابه
+scikit-learn>=1.3.0
+# 9. واجهة سطر الأوامر
+typer>=0.9.0
+rich>=13.7.0
+# 10. التسجيل والتقارير
+loguru>=0.7.0
