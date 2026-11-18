@@ -1,4 +1,2 @@
-name: my-harness-engineering
+model_api: google-cloud/gemini-3.8-flash
 serve: python serve.py
-language: python
-entrypoint: serve.py
