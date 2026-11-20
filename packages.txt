@@ -1,2 +1,8 @@
 tesseract-ocr
 tesseract-ocr-ara
+tesseract-ocr-fra
+tesseract-ocr-deu
+tesseract-ocr-rus
+tesseract-ocr-spa
+tesseract-ocr-ita
+tesseract-ocr-tur
