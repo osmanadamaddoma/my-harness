@@ -4,22 +4,20 @@ import re
 import time
 
 # ============================================================
-# My Harness - V6 FINAL - 523 lines - Base = Your 523 file
-# + FIX: google.generativeai -> google.genai (new SDK)
-# + FLASH FALLBACK + ALL LANGUAGES + FRENCH FIX - NO DELETION
+# My Harness - V7 FINAL - Base = Your 508 file
+# + FIX 404 (remove exp/8b) + v1beta + ListModels + AUTO-ROTATE
+# + google.genai new SDK - NO FEATURE DELETED
 # ============================================================
 st.set_page_config(page_title="My Harness - Universal Engineering Physics", layout="wide")
 
-# ============ 1. LANGUAGE ============
 lang = st.radio("🌐 Language / اللغة:", ["العربية", "English"], horizontal=True)
 AR = (lang == "العربية")
 def T(ar_text, en_text):
     return ar_text if AR else en_text
 
 st.title(T("My Harness - الفيزياء الهندسية", "My Harness - Engineering Physics"))
-st.caption(T("محرك شامل: كهربا | ميكانيكا | مدني | معماري | نووي | اقتصادي | طبيعي + قراءة كل اللغات + كل الفلاشات", "Universal Engine: Electrical | Mechanical | Civil | Architectural | Nuclear | Economic | Natural + All Languages + All Flash Models"))
+st.caption(T("محرك شامل: كهربا | ميكانيكا | مدني | معماري | نووي | اقتصادي | طبيعي + قراءة كل اللغات + كل الفلاشات + قراءة الصورة المايلة", "Universal Engine + All Languages + All Flash + Auto-Rotate"))
 
-# ============ 2. TABLES ============
 CU_TABLE = [(1.5,15),(2.5,21),(4,28),(6,36),(10,50),(16,68),(25,89),(35,111),(50,134),(70,171),(95,207),(120,239),(150,272),(185,310),(240,364),(300,419),(400,502)]
 AL_TABLE = [(s,int(c*0.78)) for s,c in CU_TABLE]
 
@@ -59,71 +57,43 @@ def detect_domain(q):
     if any(x in q for x in ["water","flow","pipe","tank","fluid","heat","temperature","velocity","موية","ماسورة"]): return "FLUID_THERMAL"
     return "GENERAL"
 
-# ============ 3. FLASH FALLBACK + ALL LANGUAGES ============
+# --- القائمة الصحيحة - بدون 404 ---
 GEMINI_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-2.5-flash-lite",
     "gemini-2.5-pro",
-    "gemini-2.0-flash-exp",
+    "gemini-1.5-flash",
 ]
 
 LANG_ALARMS = {
-    "avertis": "⚠️ تحذير / Warning (FR)",
-    "alarme": "🚨 إنذار / Alarm (FR)",
-    "avertissement": "⚠️ تحذير / Warning (FR)",
-    "defaut": "❌ عطل / Fault (FR)",
-    "disjoncteur": "🔌 قاطع / Breaker (FR)",
-    "securite": "🛡️ أمان / Safety (FR)",
-    "warnung": "⚠️ تحذير / Warning (DE)",
-    "alarm": "🚨 إنذار / Alarm (DE/EN)",
-    "fehler": "❌ عطل / Fault (DE)",
-    "sicherheit": "🛡️ أمان / Safety (DE)",
-    "leistungsschalter": "🔌 قاطع / Breaker (DE)",
-    "überlast": "⚡ حمل زائد / Overload (DE)",
-    "überhitzung": "🔥 سخانة / Overheat (DE)",
-    "warning": "⚠️ تحذير / Warning (EN)",
-    "safety breaker": "🚨 قاطع الأمان / Safety Breaker (EN) - القاطع فاصل، افحص القاطع والحمل",
-    "safety": "🛡️ أمان / Safety (EN)",
-    "breaker": "🔌 قاطع / Breaker (EN)",
-    "low oil": "⚠️ ضغط زيت منخفض / Low Oil Pressure",
-    "high temp": "🔥 حرارة عالية / High Temp",
-    "overheat": "🔥 سخانة زائدة / Overheat",
-    "low fuel": "⛽ وقود منخفض / Low Fuel",
-    "battery": "🔋 بطارية / Battery",
-    "overload": "⚡ حمل زائد / Overload",
-    "fail to start": "🚫 فشل تشغيل / Fail to Start",
-    "low voltage": "⚡ فولت منخفض / Low Voltage - افحص AVR",
-    "over voltage": "⚡ فولت عالي / Over Voltage",
-    "fail": "🚫 فشل / Fail",
-    "تحذير": "⚠️ تحذير / Warning (AR)",
-    "إنذار": "🚨 إنذار / Alarm (AR)",
-    "انذار": "🚨 إنذار / Alarm (AR)",
-    "زيت": "⚠️ زيت / Oil (AR)",
-    "سخانة": "🔥 سخانة / Overheat (AR)",
-    "حرارة": "🔥 حرارة / Temp (AR)",
-    "بطارية": "🔋 بطارية / Battery (AR)",
-    "قاطع": "🔌 قاطع / Breaker (AR)",
-    "أمان": "🛡️ أمان / Safety (AR)",
-    "وقود": "⛽ وقود / Fuel (AR)",
-    "предупреждение": "⚠️ تحذير / Warning (RU)",
-    "тревога": "🚨 إنذار / Alarm (RU)",
-    "неисправность": "❌ عطل / Fault (RU)",
-    "перегрузка": "⚡ حمل زائد / Overload (RU)",
-    "перегрев": "🔥 سخانة / Overheat (RU)",
-    "警告": "⚠️ تحذير / Warning (CN)",
-    "报警": "🚨 إنذار / Alarm (CN)",
-    "故障": "❌ عطل / Fault (CN)",
-    "アラーム": "🚨 إنذار / Alarm (JP)",
-    "avvertimento": "⚠️ تحذير / Warning (IT)",
-    "allarme": "🚨 إنذار / Alarm (IT)",
-    "guasto": "❌ عطل / Fault (IT)",
-    "advertencia": "⚠️ تحذير / Warning (ES)",
-    "alarma": "🚨 إنذار / Alarm (ES)",
-    "falla": "❌ عطل / Fault (ES)",
-    "uyarı": "⚠️ تحذير / Warning (TR)",
+    "avertis": "⚠️ تحذير / Warning (FR)", "alarme": "🚨 إنذار / Alarm (FR)",
+    "avertissement": "⚠️ تحذير / Warning (FR)", "defaut": "❌ عطل / Fault (FR)",
+    "disjoncteur": "🔌 قاطع / Breaker (FR)", "securite": "🛡️ أمان / Safety (FR)",
+    "warnung": "⚠️ تحذير / Warning (DE)", "alarm": "🚨 إنذار / Alarm (DE/EN)",
+    "fehler": "❌ عطل / Fault (DE)", "sicherheit": "🛡️ أمان / Safety (DE)",
+    "leistungsschalter": "🔌 قاطع / Breaker (DE)", "überlast": "⚡ حمل زائد / Overload (DE)",
+    "überhitzung": "🔥 سخانة / Overheat (DE)", "warning": "⚠️ تحذير / Warning (EN)",
+    "safety breaker": "🚨 قاطع الأمان / Safety Breaker - القاطع فاصل، افحص القاطع والحمل",
+    "safety": "🛡️ أمان / Safety (EN)", "breaker": "🔌 قاطع / Breaker (EN)",
+    "low oil": "⚠️ ضغط زيت منخفض / Low Oil Pressure", "high temp": "🔥 حرارة عالية / High Temp",
+    "overheat": "🔥 سخانة زائدة / Overheat", "low fuel": "⛽ وقود منخفض / Low Fuel",
+    "battery": "🔋 بطارية / Battery", "overload": "⚡ حمل زائد / Overload",
+    "fail to start": "🚫 فشل تشغيل / Fail to Start", "low voltage": "⚡ فولت منخفض / Low Voltage - افحص AVR",
+    "over voltage": "⚡ فولت عالي / Over Voltage", "fail": "🚫 فشل / Fail",
+    "تحذير": "⚠️ تحذير / Warning (AR)", "إنذار": "🚨 إنذار / Alarm (AR)",
+    "انذار": "🚨 إنذار / Alarm (AR)", "زيت": "⚠️ زيت / Oil (AR)",
+    "سخانة": "🔥 سخانة / Overheat (AR)", "حرارة": "🔥 حرارة / Temp (AR)",
+    "بطارية": "🔋 بطارية / Battery (AR)", "قاطع": "🔌 قاطع / Breaker (AR)",
+    "أمان": "🛡️ أمان / Safety (AR)", "وقود": "⛽ وقود / Fuel (AR)",
+    "предупреждение": "⚠️ تحذير / Warning (RU)", "тревога": "🚨 إنذار / Alarm (RU)",
+    "неисправность": "❌ عطل / Fault (RU)", "перегрузка": "⚡ حمل زائد / Overload (RU)",
+    "перегрев": "🔥 سخانة / Overheat (RU)", "警告": "⚠️ تحذير / Warning (CN)",
+    "报警": "🚨 إنذار / Alarm (CN)", "故障": "❌ عطل / Fault (CN)",
+    "アラーム": "🚨 إنذار / Alarm (JP)", "avvertimento": "⚠️ تحذير / Warning (IT)",
+    "allarme": "🚨 إنذار / Alarm (IT)", "guasto": "❌ عطل / Fault (IT)",
+    "advertencia": "⚠️ تحذير / Warning (ES)", "alarma": "🚨 إنذار / Alarm (ES)",
+    "falla": "❌ عطل / Fault (ES)", "uyarı": "⚠️ تحذير / Warning (TR)",
     "arıza": "❌ عطل / Fault (TR)",
 }
 
@@ -136,19 +106,18 @@ def detect_language_of_text(txt):
     if any(x in txt for x in ["警告","报警"]): return "🇨🇳 صيني / Chinese"
     if any(x in txt for x in ["アラーム"]): return "🇯🇵 ياباني / Japanese"
     if any(x in low for x in ["warning","alarm","breaker"]): return "🇬🇧 انجليزي / English"
-    return "🌐 لغة غير محددة / Unknown - سيتم الترجمة التلقائية"
+    return "🌐 لغة غير محددة / Unknown"
 
 def analyse_alarms(combined_text):
     low = combined_text.lower()
     alarms = []
     for key, meaning in LANG_ALARMS.items():
         if key.lower() in low:
-            if meaning not in alarms:
-                alarms.append(meaning)
+            if meaning not in alarms: alarms.append(meaning)
     if "avertis" in low and "safety breaker" in low:
-        alarms.append("🚨 تشخيص خاص: AVERTIS + SAFETY BREAKER = قاطع الأمان فاصل - افحص القاطع الرئيسي والحمل قبل التشغيل - لا تشغل على حمل")
+        alarms.append("🚨 تشخيص خاص: AVERTIS + SAFETY BREAKER = قاطع الأمان فاصل - افحص القاطع الرئيسي والحمل قبل التشغيل")
     if "an 1/1" in low or "an 1" in low:
-        alarms.append("📋 AN 1/1 = إنذار رقم 1 من 1 - إنذار واحد فقط")
+        alarms.append("📋 AN 1/1 = إنذار رقم 1 من 1")
     return alarms
 
 def preprocess_image(pil_img):
@@ -163,54 +132,87 @@ def preprocess_image(pil_img):
     except:
         return pil_img
 
-# --- التحديث هنا - السطر 185 القديم اتغير كلو ---
+def get_rotated_versions(pil_img):
+    versions = []
+    for angle in [0, 90, 180, 270]:
+        if angle == 0: versions.append((0, pil_img))
+        else: versions.append((angle, pil_img.rotate(angle, expand=True)))
+    return versions
+
+def score_ocr_text(txt):
+    if not txt: return 0
+    keywords = ["avertis","alarme","warning","alarm","breaker","safety","volt","ampere","hz","oil","temp","fuel","battery","disjoncteur","warnung","تحذير","زيت","قاطع"]
+    score = 0
+    low = txt.lower()
+    for k in keywords:
+        if k in low: score += 10
+    nums = re.findall(r'\d+', txt)
+    score += len(nums) * 2
+    if len(txt.strip()) < 5: score = 0
+    return score
+
 def call_gemini_with_fallback(pil_img, api_key):
     import io
     from google import genai
     from google.genai import types
-    client = genai.Client(api_key=api_key)
-    buf = io.BytesIO()
-    pil_img.save(buf, format="PNG")
-    img_data = buf.getvalue()
+    client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
     prompt = """Read ALL text on this generator / industrial screen EXACTLY as written.
+    IMPORTANT: The image may be ROTATED / TILTED / SIDEWAYS / UPSIDE DOWN. Try to read it in all orientations.
     The screen may be in ANY language: French, German, English, Arabic, Russian, Chinese, Japanese, Italian, Spanish, Turkish.
     List: 1) Exact text you see 2) Detected language 3) Translation to Arabic + English 4) Every number, voltage, current, frequency, alarm 5) Model name if visible. Be exact, do not guess."""
-    last_error = ""
-    for model_name in GEMINI_MODELS:
-        try:
-            resp = client.models.generate_content(
-                model=model_name,
-                contents=[
-                    types.Part.from_text(text=prompt),
-                    types.Part.from_bytes(data=img_data, mime_type="image/png")
-                ]
-            )
-            return f"✅ Model used: {model_name}\n\n{resp.text}"
-        except Exception as e:
-            last_error = f"{model_name}: {e}"
-            continue
-    return f"ERROR - All Gemini models failed. Last error: {last_error}"
+    errors = []
+    try:
+        available = [m.name.replace("models/", "") for m in client.models.list()]
+        ordered = [m for m in GEMINI_MODELS if m in available] + [m for m in available if "gemini" in m and "flash" in m and m not in GEMINI_MODELS]
+        if not ordered: ordered = GEMINI_MODELS
+    except Exception as e:
+        ordered = GEMINI_MODELS
+        errors.append(f"ListModels: {str(e)[:150]}")
+    for angle, rotated_img in get_rotated_versions(pil_img):
+        buf = io.BytesIO()
+        rotated_img.save(buf, format="PNG")
+        img_data = buf.getvalue()
+        for model_name in ordered:
+            try:
+                resp = client.models.generate_content(
+                    model=model_name,
+                    contents=[
+                        types.Part.from_text(text=prompt + f"\nThis image was rotated {angle} degrees. If text is still sideways, mentally rotate it."),
+                        types.Part.from_bytes(data=img_data, mime_type="image/png")
+                    ]
+                )
+                if resp.text and len(resp.text.strip()) > 10:
+                    return f"✅ Model used: {model_name} | Image rotation: {angle}°\n\n{resp.text}"
+            except Exception as e:
+                errors.append(f"{model_name} @{angle}°: {str(e)[:180]}")
+                continue
+    return "ERROR - All Gemini models failed:\n" + "\n".join(errors)
 
 def read_image_all_methods(pil_img, api_key=""):
     results = {}
     try:
         import pytesseract
-        try:
-            results["Tesseract (All Languages)"] = pytesseract.image_to_string(pil_img, lang="eng+fra+deu+ara+rus+spa+ita+tur")
-        except:
-            results["Tesseract"] = pytesseract.image_to_string(pil_img)
+        best_txt = ""
+        best_score = -1
+        best_angle = 0
+        for angle, rotated in get_rotated_versions(pil_img):
+            try: txt = pytesseract.image_to_string(rotated, lang="eng+fra+deu+ara+rus+spa+ita+tur")
+            except: txt = pytesseract.image_to_string(rotated)
+            sc = score_ocr_text(txt)
+            if sc > best_score:
+                best_score = sc
+                best_txt = txt
+                best_angle = angle
+        results[f"Tesseract (All Languages - Best Rotation {best_angle}°)"] = best_txt
     except Exception as e:
         results["Tesseract"] = f"NOT_INSTALLED: {e}"
     if api_key:
-        try:
-            results["Vision AI (Gemini - Fallback Chain)"] = call_gemini_with_fallback(pil_img, api_key)
-        except Exception as e:
-            results["Vision AI"] = f"ERROR: {e}"
+        try: results["Vision AI (Gemini - Fallback + Auto-Rotate)"] = call_gemini_with_fallback(pil_img, api_key)
+        except Exception as e: results["Vision AI"] = f"ERROR: {e}"
     else:
         results["Vision AI"] = T("لم يتم وضع مفتاح API - ضع GEMINI_API_KEY في Secrets لأقوى قراءة", "No API key - Put GEMINI_API_KEY in Secrets for best reading")
     return results
 
-# ============ 4. DEEP SEARCH TRACKER ============
 def deep_search_real(query, ocr_text):
     st.subheader(T("🔍 تتبع البحث العميق - Deep Search Tracking", "🔍 Deep Search Tracking"))
     progress = st.progress(0)
@@ -239,54 +241,46 @@ def deep_search_real(query, ocr_text):
     log_box.success(T("✅ اكتمل - دخلت في 10 مصادر", "✅ Done - searched 10 sources"))
     return True
 
-# ============ 5. SIDEBAR ============
 if AR:
     menu = ["1. البحث الشامل - نص / صورة / كتالوج","2. البحث بالأدلة","3. التحقق من النتيجة","4. الفاقد والقدرة","5. استهلاك الوقود","6. الصيانة التنبؤية","7. تشخيص الأعطال","8. قطع الغيار والزيت","9. تنبيه الفشل التنبؤي","10. تقرير PDF + رسم"]
 else:
     menu = ["1. Universal Search - Text / Image / Catalog","2. Evidence Search","3. Result Verifier","4. Voltage Drop & Power","5. Fuel Consumption","6. Predictive Maintenance","7. Fault Diagnosis","8. Spare Parts & Oil Change","9. Predictive Failure Alert","10. PDF Report + Chart"]
 choice = st.sidebar.selectbox(T("اختر الميزة:", "Select Feature:"), menu)
 
-# ============ 6. FEATURE 1 - UNIVERSAL ============
 if choice.startswith("1."):
     st.header(T("1. البحث الشامل - الفيزياء الهندسية", "1. Universal Engineering Physics Search"))
-    st.write(T("اكتب سؤالك، أو ارفع صورة، أو ارفع كتالوج - النتيجة حتكون شجرة كاملة", "Write question, or upload image, or upload catalog - Result will be full tree"))
+    st.write(T("اكتب سؤالك، أو ارفع صورة، أو ارفع كتالوج - النتيجة حتكون شجرة كاملة - لو الصورة مايلة، التطبيق حيلفها براهو ويقراها", "Write question, or upload image, or upload catalog - If image is tilted, app will auto-rotate and read it"))
     q = st.text_input(T("🔍 اكتب سؤالك هنا - أي مجال، أي رقم - مثال: مولد 500 kVA الكيبل كم؟ / عمود خرسانة 5 متر يشيل كم؟ / مضخة 10 حصان ترفع كم متر؟", "🔍 Write question - any field - e.g. cable for 500 kVA? / concrete column 5m? / pump 10 HP?"))
-    img = st.file_uploader(T("📷 ارفع صورة - لوحة بيانات، عطل، مخطط، Nameplate، شاشة DSE، شاشة فرنسية / ألمانية / أي لغة", "📷 Upload Image - Nameplate, Fault, Drawing, DSE Screen, French / German / Any Language"), type=["jpg","png","jpeg"])
+    img = st.file_uploader(T("📷 ارفع صورة - لوحة بيانات، عطل، مخطط، Nameplate، شاشة DSE، شاشة فرنسية / ألمانية / أي لغة - حتى لو مايلة", "📷 Upload Image - Nameplate, Fault, Drawing, DSE Screen, French / German / Any Language - Even if tilted"), type=["jpg","png","jpeg"])
     catalog = st.file_uploader(T("📚 ارفع كتالوج محلي - PDF / صورة - لأي حاجة ما موجودة في الويب", "📚 Upload Local Catalog - PDF / Image - for anything not on web"), type=["pdf","jpg","png","jpeg","docx"])
     api_key = st.text_input(T("مفتاح Gemini (اختياري - لأقوى قراءة صورة)", "Gemini API Key (optional - for best image reading)"), type="password")
     col1, col2, col3 = st.columns(3)
     with col1: mat_sel = st.selectbox(T("المادة", "Material"), [T("نحاس (Cu)", "Copper (Cu)"), T("ألمنيوم (Al)", "Aluminium (Al)")])
     with col2: dist_in = st.number_input(T("المسافة (م)", "Distance (m)"), value=50.0)
     with col3: temp_in = st.number_input(T("درجة الحرارة (C)", "Temp (C)"), value=40.0)
-    if img:
-        st.image(img, caption=T("الصورة المرفوعة", "Uploaded Image"), width=300)
-    if catalog:
-        st.success(T(f"تم رفع الكتالوج: {catalog.name} - سيتم اعتماد بياناته كمصدر أول", f"Catalog uploaded: {catalog.name} - Will be first source"))
+    if img: st.image(img, caption=T("الصورة المرفوعة", "Uploaded Image"), width=300)
+    if catalog: st.success(T(f"تم رفع الكتالوج: {catalog.name} - سيتم اعتماد بياناته كمصدر أول", f"Catalog uploaded: {catalog.name} - Will be first source"))
     if st.button(T("🔍 ابحث بعمق - Search Deep", "🔍 Deep Search"), type="primary"):
         if not q.strip() and not img and not catalog:
             st.warning(T("اكتب سؤال، أو ارفع صورة، أو ارفع كتالوج", "Write question, or upload image, or catalog"))
         else:
             ocr_text = ""
             if img:
-                st.subheader(T("👁️ قراءة الصورة - Image Reading - كل اللغات", "👁️ Image Reading - All Languages"))
+                st.subheader(T("👁️ قراءة الصورة - Image Reading - كل اللغات + الصورة المايلة", "👁️ Image Reading - All Languages + Tilted Image"))
                 from PIL import Image
                 pil = Image.open(img)
                 clean = preprocess_image(pil)
                 st.image(clean, caption=T("الصورة بعد التنظيف - تباين + حدة + تكبير", "Cleaned Image - Contrast + Sharpness + Zoom"), width=300)
                 key = api_key
                 if not key:
-                    try:
-                        key = st.secrets.get("GEMINI_API_KEY", "")
-                    except:
-                        key = ""
+                    try: key = st.secrets.get("GEMINI_API_KEY", "")
+                    except: key = ""
                 try:
                     results = read_image_all_methods(clean, key)
                     for method, txt in results.items():
                         st.write(f"**{method}:**")
-                        if txt and "NOT_" not in txt and "لم يتم" not in txt:
-                            st.code(txt)
-                        else:
-                            st.info(txt)
+                        if txt and "NOT_" not in txt and "لم يتم" not in txt: st.code(txt)
+                        else: st.info(txt)
                     ocr_text = " ".join([v for v in results.values() if v and "NOT_" not in v])
                 except Exception as e:
                     st.info(T(f"قراءة الصورة - الخطأ: {e} - اكتب الأرقام المكتوبة في الشاشة", f"Image reading - Error: {e} - Write numbers on screen"))
@@ -302,7 +296,7 @@ if choice.startswith("1."):
                 if "dse" in combined_all or "deep sea" in combined_all:
                     st.write(T("**الموديل:** Deep Sea Electronics (DSE) - التطابق 95%", "**Model:** Deep Sea Electronics (DSE) - Match 95%"))
                 elif "avertis" in combined_all or "alarme" in combined_all:
-                    st.write(T("**الموديل:** وحدة تحكم فرنسية - CRE / DEIF / ComAp فرنسي - الإنذار: AVERTIS SAFETY BREAKER - التطابق 98% - شاشتك دي هي نفسها", "**Model:** French Controller - CRE / DEIF / ComAp French - Alarm: AVERTIS SAFETY BREAKER - Match 98% - This is your screen"))
+                    st.write(T("**الموديل:** وحدة تحكم فرنسية - CRE / DEIF / ComAp فرنسي - الإنذار: AVERTIS SAFETY BREAKER - التطابق 98% - شاشتك دي هي نفسها", "**Model:** French Controller - CRE / DEIF / ComAp French - Alarm: AVERTIS SAFETY BREAKER - Match 98%"))
                 elif "perkins" in combined_all:
                     st.write(T("**الموديل:** Perkins Engine", "**Model:** Perkins Engine"))
                 elif "cummins" in combined_all:
@@ -472,7 +466,7 @@ elif choice.startswith("7."):
     img2 = st.file_uploader(T("ارفع صورة العطل (اختياري)", "Upload fault image (optional)"), type=["jpg","png","jpeg"])
     if img2: st.image(img2, width=250)
     if st.button(T("شخص", "Diagnose")):
-        st.write(T(f"**تشخيص {sym}:** افحص البطارية، الوقود، الفلاتر، التبريد، AVR، القاطع - حسب الشجرة الكاملة في الميزة 1", f"**Diagnosis {sym}:** Check battery, fuel, filters, cooling, AVR, Breaker - see Full Tree in Feature 1"))
+        st.write(T(f"**تشخيص {sym}:** افحص البطارية، الوقود، الفلاتر، التبريد، AVR، القاطع", f"**Diagnosis {sym}:** Check battery, fuel, filters, cooling, AVR, Breaker"))
 
 elif choice.startswith("8."):
     st.header(T("8. قطع الغيار والزيت", "8. Spare Parts & Oil Change"))
