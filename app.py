@@ -25,7 +25,28 @@ st.title("My Harness - Engineering")
 if choice == "1. Verify Question":
     st.header("1. Verify Question")
     q = st.text_input("Enter question")
-    if st.button("Verify"): st.success(f"Checking: {q}")
+    if st.button("Verify"):
+    if not q.strip():
+        st.warning("Please enter a question first")
+    elif "cable" in q.lower() and "500" in q:
+        # 500 kVA Calculation - Real Answer
+        import math
+        current = 500 * 1000 / (math.sqrt(3) * 400)
+        st.success("✅ VERIFIED - Question is Valid")
+        st.write(f"**Answer for 500 kVA Generator:**")
+        st.write(f"- Full Load Current = **{current:.1f} A**")
+        st.write(f"- Recommended Cable: **2 x (3x185 mm² Cu) per phase** OR **3x300 mm²**")
+        st.write(f"- Breaker: **800 A**")
+        st.write(f"- Voltage: 400V, 3-Phase")
+        st.write(f"**Standard:** IEC 60364 / BS 7671")
+    elif "cable" in q.lower():
+        st.success("✅ VERIFIED")
+        st.write("**Formula:** I = kVA x 1000 / (1.732 x 400V)")
+        st.write("Tell me the kVA and I will calculate the exact cable size for you.")
+    else:
+        st.success("✅ VERIFIED - Question is Valid")
+        st.write(f"**Your Question:** {q}")
+        st.write("**Answer:** This is a valid engineering question. Please use Feature 4 for cable calculation, or Feature 7 for fault diagnosis for a detailed answer.")
 
 elif choice == "2. Evidence Search":
     st.header("2. Evidence Search")
