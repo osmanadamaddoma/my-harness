@@ -6,3 +6,4 @@ pytesseract
 numpy
 Pillow
 google-genai
+google-search-results
