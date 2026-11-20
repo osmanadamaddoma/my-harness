@@ -2,4 +2,7 @@ streamlit
 matplotlib
 reportlab
 Pillow
+easyocr
 pytesseract
+google-generativeai
+numpy
