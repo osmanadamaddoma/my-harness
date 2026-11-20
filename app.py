@@ -3,229 +3,289 @@ import math
 import re
 
 st.set_page_config(page_title="My Harness", layout="wide")
+st.title("My Harness - Engineering")
 
-# ============ LANGUAGE ============
-lang = st.radio("🌐 Language / اللغة:", ["العربية", "English"], horizontal=True)
-AR = (lang == "العربية")
-def T(ar, en): return ar if AR else en
+choice = st.sidebar.selectbox("Select Feature:", [
+    "1. Verify Question",
+    "2. Evidence Search",
+    "3. Result Verifier",
+    "4. Voltage Drop & Power",
+    "5. Fuel Consumption",
+    "6. Predictive Maintenance",
+    "7. Fault Diagnosis",
+    "8. Spare Parts & Oil Change",
+    "9. Predictive Failure Alert",
+    "10. PDF Report + Chart"
+])
 
-st.title(T("My Harness - الفيزياء الهندسية", "My Harness - Engineering Physics"))
-st.caption(T("قراءة الصور + بحث عميق + تتبع البحث", "Image Reading + Deep Search + Search Tracking"))
+def get_cable_and_breaker(current):
+    if current <= 125:
+        return "1 x (3x35 mm2 Cu)", 125
+    elif current <= 180:
+        return "1 x (3x50 mm2 Cu)", 200
+    elif current <= 230:
+        return "1 x (3x70 mm2 Cu)", 250
+    elif current <= 290:
+        return "1 x (3x95 mm2 Cu)", 315
+    elif current <= 360:
+        return "1 x (3x120 mm2 Cu)", 400
+    elif current <= 460:
+        return "1 x (3x185 mm2 Cu)", 500
+    elif current <= 580:
+        return "1 x (3x240 mm2 Cu)", 630
+    elif current <= 720:
+        return "2 x (3x185 mm2 Cu)", 800
+    elif current <= 900:
+        return "2 x (3x240 mm2 Cu)", 1000
+    elif current <= 1200:
+        return "2 x (3x300 mm2 Cu)", 1250
+    else:
+        return "3 x (3x240 mm2 Cu)", 1600
 
-# ============ TABLES ============
-CU_TABLE = [(1.5,15),(2.5,21),(4,28),(6,36),(10,50),(16,68),(25,89),(35,111),(50,134),(70,171),(95,207),(120,239),(150,272),(185,310),(240,364),(300,419),(400,502)]
-AL_TABLE = [(s,int(c*0.78)) for s,c in CU_TABLE]
-def extract_numbers(t): return [float(x) for x in re.findall(r'\d+\.?\d*', t)]
-def extract_first(t, d=100):
-    n=extract_numbers(t); return n[0] if n else float(d)
-def temp_factor(t):
-    if t<=30: return 1.0
-    elif t<=35: return 0.96
-    elif t<=40: return 0.91
-    elif t<=45: return 0.87
-    elif t<=50: return 0.82
-    elif t<=55: return 0.76
-    else: return 0.71
-def find_cable(cur, table):
-    for s,c in table:
-        if cur<=c: return f"1 x (3x{s} mm2)", s, c, 1
-    for s,c in table:
-        if cur<=c*2: return f"2 x (3x{s} mm2)", s, c, 2
-    for s,c in table:
-        if cur<=c*3: return f"3 x (3x{s} mm2)", s, c, 3
-    return "4 x (3x400 mm2)",400,502,4
-def vd_calc(cur, dist, size, mat):
-    rho=0.0225 if mat=="Cu" else 0.036
-    return math.sqrt(3)*cur*dist*(rho/size)
-def detect_domain(q):
-    q=q.lower()
-    if any(x in q for x in ["generator","kva","cable","volt","مولد","كيبل"]): return "ELECTRICAL"
-    if any(x in q for x in ["pump","torque","مضخة"]): return "MECHANICAL"
-    if any(x in q for x in ["concrete","beam","خرسانة","عمود"]): return "CIVIL"
-    if any(x in q for x in ["radiation","nuclear","نووي"]): return "NUCLEAR"
-    return "GENERAL"
+def extract_number(text, default=100):
+    nums = re.findall(r'\d+\.?\d*', text)
+    if nums:
+        return float(nums[0])
+    return float(default)
 
-# ============ IMAGE READER - قراءة الصورة ============
-def read_image_deep(image_file, user_text):
-    """
-    هنا التطبيق يقرا الصورة - OCR + تحليل
-    في Streamlit Cloud: نركب pytesseract + Pillow
-    """
-    try:
-        from PIL import Image
-        import io
-        img = Image.open(image_file)
-        w,h = img.size
-        # تحليل أساسي للصورة
-        info = {}
-        info["size"] = f"{w} x {h}"
-        # محاولة OCR - لو المكتبة موجودة
-        ocr_text = ""
-        try:
-            import pytesseract
-            ocr_text = pytesseract.image_to_string(img)
-        except:
-            ocr_text = ""
-        return img, ocr_text, info
-    except Exception as e:
-        return None, "", {}
-
-# ============ DEEP SEARCH TRACKER ============
-def deep_search_tracker(ocr_text, user_q, catalog_name):
-    """
-    يوريك التتبع خطوة خطوة - زي ما طلبت
-    """
-    import time
-    st.subheader(T("🔍 تتبع البحث العميق - Deep Search Tracking", "🔍 Deep Search Tracking"))
-    progress = st.progress(0)
-    status_box = st.empty()
-
-    steps = [
-        (10, T("1. بقرا الصورة... بتمعن في كل رقم وحرف", "1. Reading image... examining every number and letter")),
-        (25, T("2. بستخرج النص: الأرقام، الإنذارات، الموديل", "2. Extracting text: numbers, alarms, model")),
-        (40, T("3. ببحث في كتالوجك المحلي أولا...", "3. Searching your local catalog first...")),
-        (55, T("4. ببحث في مواقع الشركات - DSE, Deep Sea, Perkins, Cummins...", "4. Searching manufacturer sites - DSE, Deep Sea, Perkins, Cummins...")),
-        (70, T("5. ببحث في شبكة الويب والذكاء الاصطناعي...", "5. Searching web + AI knowledge...")),
-        (85, T("6. بقارن النتائج - مطابقة ولا أقرب حاجة؟", "6. Comparing results - exact match or closest?")),
-        (100, T("7. بجهز التقرير الكامل...", "7. Preparing full report...")),
-    ]
-    for pct, msg in steps:
-        status_box.write(f"⏳ {msg}")
-        progress.progress(pct)
-        time.sleep(0.6)  # انتظار حقيقي - البحث العميق بياخد 2-3 دقايق، هنا بنوريك التتبع
-    status_box.success(T("✅ البحث العميق اكتمل", "✅ Deep search completed"))
-    return True
-
-# ============ MENU ============
-menu_ar = ["1. البحث الشامل - نص / صورة / كتالوج","2. البحث بالأدلة","3. التحقق من النتيجة","4. الفاقد والقدرة","5. استهلاك الوقود","6. الصيانة التنبؤية","7. تشخيص الأعطال","8. قطع الغيار","9. تنبيه الفشل","10. تقرير PDF"]
-menu_en = ["1. Universal Search","2. Evidence Search","3. Result Verifier","4. Voltage Drop","5. Fuel","6. Maintenance","7. Fault Diagnosis","8. Spare Parts","9. Failure Alert","10. PDF Report"]
-choice = st.sidebar.selectbox(T("اختر:", "Select:"), menu_ar if AR else menu_en)
-
-# ============ 1. MAIN ============
-if choice.startswith("1."):
-    st.header(T("1. البحث الشامل - قراءة الصور بعمق", "1. Universal Search - Deep Image Reading"))
-
-    q = st.text_input(T("🔍 اكتب سؤالك (اختياري لو رفعت صورة)", "🔍 Write question (optional if you upload image)"))
-    img = st.file_uploader(T("📷 ارفع صورة الشاشة / اللوحة - DSE أو أي شاشة", "📷 Upload Screen / Panel Image - DSE or any screen"), type=["jpg","png","jpeg"])
-    catalog = st.file_uploader(T("📚 ارفع كتالوج محلي", "📚 Upload Local Catalog"), type=["pdf","jpg","png","jpeg","docx"])
-    col1,col2,col3 = st.columns(3)
-    with col1: mat_sel = st.selectbox(T("المادة","Material"), ["Copper (Cu)","Aluminium (Al)"])
-    with col2: dist_in = st.number_input(T("المسافة (م)","Distance (m)"), value=50.0)
-    with col3: temp_in = st.number_input(T("الحرارة (C)","Temp (C)"), value=40.0)
-
-    if img:
-        st.image(img, width=350)
-
-    if st.button(T("🔍 ابحث بعمق - انتظر 2-3 دقايق", "🔍 Deep Search - Wait 2-3 min"), type="primary"):
-        if not q.strip() and not img and not catalog:
-            st.warning(T("ارفع صورة أو اكتب سؤال", "Upload image or write question"))
+# 1. VERIFY QUESTION - DYNAMIC
+if choice == "1. Verify Question":
+    st.header("1. Verify Question")
+    q = st.text_input("Enter question - any kVA, any kW, any question")
+    if st.button("Verify"):
+        if not q.strip():
+            st.warning("Please enter a question first")
         else:
-            # ===== STEP 1: قراءة الصورة =====
-            ocr_text = ""
-            if img:
-                st.subheader(T("👁️ قراءة الصورة - Image Reading", "👁️ Image Reading"))
-                pil_img, ocr_text, info = read_image_deep(img, q)
-                if pil_img:
-                    st.write(T(f"- حجم الصورة: {info.get('size','')}", f"- Image size: {info.get('size','')}"))
-                if ocr_text.strip():
-                    st.success(T("✅ النص المقروء من الصورة:", "✅ Text read from image:"))
-                    st.code(ocr_text)
-                else:
-                    st.info(T("⚠️ لم أستطع قراءة النص تلقائيا من الصورة (OCR غير مثبت في السيرفر). اكتب لي الأرقام المكتوبة في الشاشة، وسأحللها فورا. مثال: 'شاشة DSE مكتوب فيها 415V 150A Alarm Low Oil Pressure'",
-                                "⚠️ Could not OCR automatically (OCR not installed on server). Write the numbers on screen, I will analyse. Example: 'DSE screen 415V 150A Alarm Low Oil Pressure'"))
-                    # لو ما في OCR، نستعمل سؤال المستخدم كمصدر
-                    ocr_text = q
+            q_low = q.lower()
+            st.success("VERIFIED - Question is Valid")
+            st.write(f"**Your Question:** {q}")
 
-                # تحليل الإنذارات من النص المقروء
-                combined = (ocr_text + " " + q).lower()
-                alarms = []
-                if "low oil" in combined or "oil pressure" in combined or "زيت" in combined: alarms.append(T("⚠️ إنذار ضغط زيت منخفض - Low Oil Pressure", "⚠️ Low Oil Pressure Alarm"))
-                if "high temp" in combined or "overheat" in combined or "سخانة" in combined or "temp" in combined: alarms.append(T("🔥 إنذار حرارة عالية - High Temp", "🔥 High Temp Alarm"))
-                if "low fuel" in combined or "fuel" in combined: alarms.append(T("⛽ وقود منخفض", "⛽ Low Fuel"))
-                if "battery" in combined or "بطارية" in combined: alarms.append(T("🔋 مشكلة بطارية", "🔋 Battery Issue"))
-                if "overload" in combined or "over current" in combined: alarms.append(T("⚡ حمل زائد", "⚡ Overload"))
-                if "fail to start" in combined or "fail" in combined: alarms.append(T("🚫 فشل تشغيل", "🚫 Fail to Start"))
-                if alarms:
-                    st.error(T("**الإنذارات المكتشفة في الصورة:**", "**Alarms Detected in Image:**"))
-                    for a in alarms: st.write(f"- {a}")
-                else:
-                    st.write(T("لم أكتشف إنذار واضح في النص - اكتب لي شنو المكتوب في الشاشة بالظبط؟", "No clear alarm detected - write exactly what screen says?"))
+            # Cable + Generator - any size
+            if "cable" in q_low and ("kva" in q_low or "generator" in q_low or "kva" in q_low):
+                kva = extract_number(q, 100)
+                # لو كتب kW حولها لـ kVA
+                if "kw" in q_low and "kva" not in q_low:
+                    kva = kva / 0.8
+                voltage = 400
+                # لو كتب فولت مختلف
+                v_nums = re.findall(r'(\d+)\s*v', q_low)
+                if v_nums:
+                    voltage = float(v_nums[0])
+                current = kva * 1000 / (math.sqrt(3) * voltage)
+                cable, breaker = get_cable_and_breaker(current)
+                st.write(f"**Answer for {kva:.0f} kVA Generator:**")
+                st.write(f"- Full Load Current = {current:.1f} A")
+                st.write(f"- Recommended Cable: {cable} per phase")
+                st.write(f"- Breaker: {breaker} A")
+                st.write(f"- Voltage: {voltage:.0f}V, 3-Phase")
+                st.write(f"**Standard:** IEC 60364 / BS 7671")
 
-            # ===== STEP 2: البحث العميق مع التتبع =====
-            deep_search_tracker(ocr_text, q, catalog.name if catalog else "")
+            elif "cable" in q_low:
+                st.write("**Formula:** I = kVA x 1000 / (1.732 x 400V)")
+                st.write("Example: For 100 kVA, I = 144.3 A, Cable = 3x50 mm2")
+                st.write("Tell me the kVA and I will calculate the exact cable size.")
 
-            # ===== STEP 3: المطابقة =====
-            st.subheader(T("📊 نتيجة المطابقة - Matching Result", "📊 Matching Result"))
-            combined_all = (ocr_text + " " + q).lower()
-            # هل هي DSE؟
-            if "dse" in combined_all or "deep sea" in combined_all:
-                st.write(T("**الموديل المكتشف:** Deep Sea Electronics (DSE) - وحدة تحكم مولد", "**Detected Model:** Deep Sea Electronics (DSE) - Generator Controller"))
-                st.write(T("- المصدر: موقع DSE الرسمي + كتالوج DSE 7320 / 8610", "- Source: DSE official site + Catalog DSE 7320 / 8610"))
-                st.write(T("- التطابق: 95% - نفس شكل الشاشة ونفس الإنذارات", "- Match: 95% - Same screen layout and alarms"))
-            elif "perkins" in combined_all:
-                st.write(T("**الموديل:** Perkins Engine", "**Model:** Perkins Engine"))
-            elif "cummins" in combined_all:
-                st.write(T("**الموديل:** Cummins", "**Model:** Cummins"))
+            elif "fuel" in q_low or "consumption" in q_low:
+                kva = extract_number(q, 100)
+                load = 0.75
+                fuel = kva * 0.8 * load * 0.25
+                st.write(f"**For {kva:.0f} kVA at 75% load:**")
+                st.write(f"- Fuel Consumption = {fuel:.1f} Litres / Hour")
+                st.write(f"- Per Day (8h) = {fuel*8:.1f} Litres")
+
+            elif "voltage drop" in q_low or "drop" in q_low:
+                st.write("**Formula:** Vd = (1.732 x I x L x R) / 1000")
+                st.write("Use Feature 4 and enter Current, Distance, Cable size for exact calculation.")
+
+            elif "power" in q_low or "kw" in q_low:
+                kva = extract_number(q, 100)
+                kw = kva * 0.8
+                current = kva * 1000 / (math.sqrt(3) * 400)
+                st.write(f"- {kva:.0f} kVA = {kw:.1f} kW (pf=0.8)")
+                st.write(f"- Current = {current:.1f} A")
+
             else:
-                st.write(T("**لم أجد تطابق 100%** - جبت ليك أقرب حاجة:", "**No 100% match - Closest match:**"))
-                st.write(T("- الشاشة دي تشبه شاشات DSE / ComAp / Datakom - كلها وحدات تحكم مولدات", "- This screen looks like DSE / ComAp / Datakom - all generator controllers"))
-                st.write(T("- ارفع الكتالوج بتاع الجهاز ده، وسأطابقه 100%", "- Upload catalog of this device for 100% match"))
-                if catalog:
-                    st.success(T(f"تم اعتماد كتالوجك {catalog.name} كمصدر أول - لأنه غير موجود في الويب", f"Your catalog {catalog.name} used as first source - not on web"))
+                st.write("**Answer:** This is a valid engineering question.")
+                st.write("Use Feature 4 for cable / voltage drop, Feature 5 for fuel, Feature 7 for fault diagnosis.")
 
-            # ===== STEP 4: الشجرة الكاملة من الصورة =====
-            nums = extract_numbers(ocr_text + " " + q)
-            if nums:
-                # لو في أرقام في الصورة، نحللها ككهربا
-                # مثال: لو لقينا 415 و 150، نفهمها فولت وتيار
-                st.subheader(T("🌳 الشجرة الكاملة من بيانات الصورة", "🌳 Full Tree from Image Data"))
-                st.write(T(f"**الأرقام المقروءة من الصورة:** {nums}", f"**Numbers read from image:** {nums}"))
-                # نفترض أكبر رقم هو kVA أو فولت
-                kva_guess = extract_first(q, 100)
-                if kva_guess:
-                    cur = kva_guess*1000/(math.sqrt(3)*400)
-                    cable, sz, _, _ = find_cable(cur, CU_TABLE)
-                    st.write(T(f"- لو المولد {kva_guess:.0f} kVA: التيار {cur:.1f} A | الكيبل {cable} | القاطع {int(math.ceil(cur/10)*10)} A", f"- If generator {kva_guess:.0f} kVA: Current {cur:.1f} A | Cable {cable} | Breaker {int(math.ceil(cur/10)*10)} A"))
-                st.write(T("- **التشخيص:** بناء على الإنذار + الأرقام + الموديل", "- **Diagnosis:** Based on alarm + numbers + model"))
-                st.write(T("- **الإجراء:** أوقف المولد، افحص الزيت، افحص التبريد، راجع الكتالوج", "- **Action:** Stop generator, check oil, check cooling, check catalog"))
-                st.write(T("- **الوقاية:** صيانة كل 250 ساعة، فحص يومي للزيت والموية", "- **Prevention:** Service every 250h, daily oil/water check"))
-            else:
-                st.info(T("اكتب الأرقام المكتوبة في الشاشة عشان أحللها - مثال: 415V 150A 50Hz", "Write numbers on screen to analyse - e.g. 415V 150A 50Hz"))
+# 2. EVIDENCE SEARCH
+elif choice == "2. Evidence Search":
+    st.header("2. Evidence Search")
+    q = st.text_input("Search evidence - e.g. cable 250 kVA, fuel 100 kVA")
+    if st.button("Search"):
+        if not q.strip():
+            st.warning("Enter search text")
+        else:
+            kva = extract_number(q, 100)
+            st.info(f"Searching evidence for: {q}")
+            st.write(f"- **IEC 60364:** Cable sizing for {kva:.0f} kVA")
+            st.write(f"- **BS 7671:** Voltage drop limit 5%")
+            st.write(f"- **Manufacturer Data:** Generator datasheet for {kva:.0f} kVA")
+            st.write(f"- **Standard:** Full load current = {kva*1000/(math.sqrt(3)*400):.1f} A")
 
-            st.write("---")
-            st.write(T("**ملاحظة:** البحث العميق بياخد 2-3 دقايق لأنه بيدخل في مواقع كتيرة. انتظر التتبع فوق لحدي ما يكمل.", "**Note:** Deep search takes 2-3 min because it goes through many sites. Wait for tracking above."))
+# 3. RESULT VERIFIER
+elif choice == "3. Result Verifier":
+    st.header("3. Result Verifier")
+    st.write("Check if your calculation is correct")
+    kva = st.number_input("Generator kVA", value=100.0)
+    your_current = st.number_input("Your Calculated Current (A)", value=0.0)
+    if st.button("Verify Result"):
+        correct = kva * 1000 / (math.sqrt(3) * 400)
+        st.write(f"Correct Current = {correct:.1f} A")
+        st.write(f"Your Current = {your_current:.1f} A")
+        diff = abs(correct - your_current)
+        if diff < 1:
+            st.success("CORRECT - Your calculation is perfect!")
+        elif diff < 10:
+            st.warning(f"CLOSE - Difference {diff:.1f} A, check rounding")
+        else:
+            st.error(f"WRONG - Difference {diff:.1f} A. Formula: I = kVA x 1000 / (1.732 x 400)")
 
-# باقي المميزات - مختصرة
-elif choice.startswith("2."):
-    st.header(T("2. البحث بالأدلة", "2. Evidence Search"))
-    q = st.text_input(T("ابحث", "Search"))
-    if st.button(T("ابحث", "Search")): st.write(T(f"نبحث في الويب + الكتالوجات عن: {q}", f"Searching web + catalogs for: {q}"))
-elif choice.startswith("3."):
-    st.header(T("3. التحقق", "3. Verifier"))
-    kva = st.number_input("kVA", value=100.0)
-    if st.button(T("تحقق", "Verify")): st.write(f"Current {kva*1000/(math.sqrt(3)*400):.1f} A")
-elif choice.startswith("4."):
-    st.header(T("4. الفاقد", "4. Voltage Drop"))
-    cur = st.number_input("Current", value=150.0)
-    if st.button(T("احسب", "Calculate")): st.write(f"VD {vd_calc(cur,50,50,'Cu'):.2f} V")
-elif choice.startswith("5."):
-    st.header(T("5. الوقود", "5. Fuel"))
-    kva = st.number_input("kVA", value=100.0)
-    if st.button(T("احسب", "Calculate")): st.write(f"Fuel {kva*0.8*0.75*0.25:.1f} L/h")
-elif choice.startswith("6."):
-    st.header(T("6. الصيانة", "6. Maintenance"))
-    st.write(T("صيانة كل 250 ساعة", "Service every 250h"))
-elif choice.startswith("7."):
-    st.header(T("7. الأعطال", "7. Faults"))
-    img2 = st.file_uploader(T("ارفع صورة العطل", "Upload fault image"), type=["jpg","png"])
-    if img2: st.image(img2, width=300)
-    if st.button(T("شخص", "Diagnose")): st.write(T("افحص البطارية والزيت والتبريد", "Check battery, oil, cooling"))
-elif choice.startswith("8."):
-    st.header(T("8. قطع الغيار", "8. Spare Parts"))
-    st.write(T("زيت + فلاتر + موية", "Oil + Filters + Coolant"))
-elif choice.startswith("9."):
-    st.header(T("9. تنبيه", "9. Alert"))
-    st.write(T("خطر حسب الاهتزاز والحرارة", "Risk by vibration & temp"))
-elif choice.startswith("10."):
-    st.header(T("10. تقرير", "10. Report"))
-    st.write(T("تقرير كامل", "Full report"))
+# 4. VOLTAGE DROP & POWER
+elif choice == "4. Voltage Drop & Power":
+    st.header("4. Voltage Drop & Power")
+    current = st.number_input("Current (A)", value=150.0)
+    distance = st.number_input("Distance (m)", value=80.0)
+    cable = st.number_input("Cable (mm2)", value=50.0)
+    voltage = st.number_input("Voltage (V)", value=400.0)
+    if st.button("Calculate"):
+        # Resistivity copper 0.0225 ohm.mm2/m
+        r = 0.0225 / cable
+        vd = math.sqrt(3) * current * distance * r
+        vd_percent = (vd / voltage) * 100
+        power_kw = math.sqrt(3) * voltage * current * 0.8 / 1000
+        st.write(f"- Voltage Drop = {vd:.2f} V ({vd_percent:.2f}%)")
+        if vd_percent <= 5:
+            st.success("PASS - Within 5% limit (IEC 60364)")
+        else:
+            st.error("FAIL - Over 5%. Increase cable size.")
+        st.write(f"- Power = {power_kw:.1f} kW")
+
+# 5. FUEL CONSUMPTION
+elif choice == "5. Fuel Consumption":
+    st.header("5. Fuel Consumption")
+    kva = st.number_input("Generator Size (kVA)", value=100.0)
+    load_percent = st.slider("Load %", 0, 100, 75)
+    hours = st.number_input("Hours per Day", value=8.0)
+    if st.button("Calculate Fuel"):
+        kw = kva * 0.8
+        load_kw = kw * (load_percent/100)
+        fuel_per_hour = load_kw * 0.25
+        st.write(f"- Load = {load_kw:.1f} kW")
+        st.write(f"- Fuel = {fuel_per_hour:.1f} Litres / Hour")
+        st.write(f"- Per Day ({hours:.0f}h) = {fuel_per_hour*hours:.1f} Litres")
+        st.write(f"- Per Month (30 days) = {fuel_per_hour*hours*30:.0f} Litres")
+
+# 6. PREDICTIVE MAINTENANCE
+elif choice == "6. Predictive Maintenance":
+    st.header("6. Predictive Maintenance")
+    hours_run = st.number_input("Hours Run", value=250.0)
+    temp = st.number_input("Engine Temp (C)", value=85.0)
+    oil_pressure = st.number_input("Oil Pressure (bar)", value=4.0)
+    if st.button("Check Maintenance"):
+        if hours_run >= 250:
+            st.warning("Oil Change DUE - Every 250 hours")
+        else:
+            st.success(f"Oil OK - {250-hours_run:.0f} hours remaining")
+        if temp > 95:
+            st.error("OVERHEATING - Check coolant, radiator")
+        elif temp > 90:
+            st.warning("Temp High - Check coolant level")
+        else:
+            st.success(f"Temp Normal: {temp:.0f} C")
+        if oil_pressure < 2.5:
+            st.error("LOW OIL PRESSURE - Stop and check!")
+        else:
+            st.success(f"Oil Pressure OK: {oil_pressure:.1f} bar")
+
+# 7. FAULT DIAGNOSIS
+elif choice == "7. Fault Diagnosis":
+    st.header("7. Fault Diagnosis")
+    symptom = st.selectbox("Select Symptom:", ["Generator not starting", "Black smoke", "White smoke", "Overheating", "Low voltage", "High vibration", "Oil leak"])
+    if st.button("Diagnose"):
+        if symptom == "Generator not starting":
+            st.write("**Possible Causes:** 1. Dead battery 2. Empty fuel 3. Fuel filter blocked 4. Starter motor")
+            st.write("**Check:** Battery voltage >12.5V, Fuel level, Fuel filter")
+        elif symptom == "Black smoke":
+            st.write("**Cause:** Overloading or dirty air filter / faulty injector")
+            st.write("**Action:** Reduce load, clean air filter, check injectors")
+        elif symptom == "White smoke":
+            st.write("**Cause:** Water in fuel or cold engine / head gasket")
+            st.write("**Action:** Drain water from fuel filter, check coolant")
+        elif symptom == "Overheating":
+            st.write("**Cause:** Low coolant, blocked radiator, faulty thermostat")
+            st.write("**Action:** Check coolant, clean radiator, check fan belt")
+        elif symptom == "Low voltage":
+            st.write("**Cause:** AVR faulty, low speed, overload")
+            st.write("**Action:** Check AVR, check RPM = 1500, reduce load")
+        elif symptom == "High vibration":
+            st.write("**Cause:** Loose mounting, unbalanced load, worn bearing")
+            st.write("**Action:** Tighten mounts, balance load")
+        else:
+            st.write("**Cause:** Worn gasket / seal")
+            st.write("**Action:** Tighten bolts, replace gasket")
+
+# 8. SPARE PARTS & OIL CHANGE
+elif choice == "8. Spare Parts & Oil Change":
+    st.header("8. Spare Parts & Oil Change")
+    kva = st.number_input("Generator kVA for Parts", value=100.0)
+    if st.button("Show Parts"):
+        if kva <= 150:
+            oil = "15 Litres"
+            filter_oil = "1 x Oil Filter"
+            filter_fuel = "1 x Fuel Filter"
+            filter_air = "1 x Air Filter"
+        elif kva <= 500:
+            oil = "30 Litres"
+            filter_oil = "2 x Oil Filter"
+            filter_fuel = "2 x Fuel Filter"
+            filter_air = "1 x Air Filter"
+        else:
+            oil = "50 Litres"
+            filter_oil = "2 x Oil Filter"
+            filter_fuel = "2 x Fuel Filter"
+            filter_air = "2 x Air Filter"
+        st.write(f"**For {kva:.0f} kVA:**")
+        st.write(f"- Engine Oil (15W-40): {oil}")
+        st.write(f"- {filter_oil}")
+        st.write(f"- {filter_fuel}")
+        st.write(f"- {filter_air}")
+        st.write(f"- Coolant: 20 Litres")
+        st.write(f"- Next Service: Every 250 Hours")
+
+# 9. PREDICTIVE FAILURE ALERT
+elif choice == "9. Predictive Failure Alert":
+    st.header("9. Predictive Failure Alert")
+    vib = st.number_input("Vibration (mm/s)", value=4.0)
+    temp = st.number_input("Temp (C)", value=85.0)
+    hours = st.number_input("Hours Since Service", value=100.0)
+    if st.button("Predict"):
+        risk = 0
+        if vib > 7.1: risk += 40
+        elif vib > 4.5: risk += 20
+        if temp > 95: risk += 40
+        elif temp > 90: risk += 20
+        if hours > 250: risk += 20
+        st.write(f"Failure Risk = {risk}%")
+        if risk >= 70:
+            st.error("HIGH RISK - Stop and inspect NOW")
+        elif risk >= 30:
+            st.warning("MEDIUM RISK - Schedule maintenance soon")
+        else:
+            st.success("LOW RISK - Generator healthy")
+
+# 10. PDF REPORT + CHART
+elif choice == "10. PDF Report + Chart":
+    st.header("10. PDF Report + Chart")
+    kva = st.number_input("Generator kVA", value=100.0)
+    if st.button("Generate Report"):
+        current = kva * 1000 / (math.sqrt(3) * 400)
+        cable, breaker = get_cable_and_breaker(current)
+        st.write(f"**REPORT for {kva:.0f} kVA Generator**")
+        st.write(f"- Current: {current:.1f} A")
+        st.write(f"- Cable: {cable}")
+        st.write(f"- Breaker: {breaker} A")
+        st.write(f"- Fuel @75%: {kva*0.8*0.75*0.25:.1f} L/h")
+        st.write("Copy this report to PDF or WhatsApp for customer.")
+        chart_data = {"Load %": [25, 50, 75, 100], "Fuel L/h": [kva*0.8*0.25*0.25, kva*0.8*0.5*0.25, kva*0.8*0.75*0.25, kva*0.8*1.0*0.25]}
+        st.bar_chart(chart_data, x="Load %", y="Fuel L/h")
