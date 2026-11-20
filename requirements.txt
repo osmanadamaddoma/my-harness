@@ -6,3 +6,4 @@ pytesseract
 google-generativeai
 numpy
 Pillow
+google-genai
