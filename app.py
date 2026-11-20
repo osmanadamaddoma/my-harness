@@ -7,6 +7,7 @@ import time
 # My Harness - V7 FINAL - Base = Your 508 file
 # + FIX 404 (remove exp/8b) + v1beta + ListModels + AUTO-ROTATE
 # + google.genai new SDK - NO FEATURE DELETED
+# + FIX: No more forced 500 kVA - Image only = Diagnosis only
 # ============================================================
 st.set_page_config(page_title="My Harness - Universal Engineering Physics", layout="wide")
 
@@ -336,9 +337,10 @@ if choice.startswith("1."):
                 st.subheader(T("🌳 الشجرة الكاملة من بيانات الصورة", "🌳 Full Tree from Image Data"))
                 nums_img = extract_numbers(ocr_text + " " + q)
                 st.write(T(f"**الأرقام المقروءة:** {nums_img}", f"**Numbers read:** {nums_img}"))
-                st.write(T("- التشخيص بناء على الإنذار + الأرقام + الموديل - الإجراء: أوقف، افحص زيت، افحص موية، راجع الكتالوج - الوقاية: صيانة كل 250 ساعة", "- Diagnosis from alarm + numbers + model - Action: Stop, check oil, water, catalog - Prevention: Service every 250h"))
-            if not q.strip() and (img or catalog):
-                q = "generator 500 kVA cable"
+                st.write(T("- التشخيص المفصل فوق هو الصح - اتبع اجراءات التشخيص المفصل - ما تفترض حجم مولد من عندك", "- Detailed diagnosis above is correct - Follow it - Do not assume generator size"))
+            if not q.strip():
+                st.info(T("📸 تمت قراءة الصورة فقط - ما حنفرض مولد 500 kVA - التشخيص الفوق هو الصح", "📸 Image only - No 500 kVA assumed - Diagnosis above is correct"))
+                st.stop()
             q_low = q.lower()
             domain = detect_domain(q)
             st.success(T(f"✅ تم التحقق - المجال: {domain}", f"✅ VERIFIED - Domain: {domain}"))
