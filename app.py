@@ -4,12 +4,13 @@ import re
 import time
 
 # ============================================================
-# My Harness - V5 FULL - 460+ lines - Base = Your 422 lines
-# + FLASH FALLBACK CHAIN + ALL LANGUAGES + FRENCH FIX
+# My Harness - V6 FINAL - 523 lines - Base = Your 523 file
+# + FIX: google.generativeai -> google.genai (new SDK)
+# + FLASH FALLBACK + ALL LANGUAGES + FRENCH FIX - NO DELETION
 # ============================================================
 st.set_page_config(page_title="My Harness - Universal Engineering Physics", layout="wide")
 
-# ============ 1. LANGUAGE - ثنائية اللغة ============
+# ============ 1. LANGUAGE ============
 lang = st.radio("🌐 Language / اللغة:", ["العربية", "English"], horizontal=True)
 AR = (lang == "العربية")
 def T(ar_text, en_text):
@@ -58,8 +59,7 @@ def detect_domain(q):
     if any(x in q for x in ["water","flow","pipe","tank","fluid","heat","temperature","velocity","موية","ماسورة"]): return "FLUID_THERMAL"
     return "GENERAL"
 
-# ============ 3. FLASH FALLBACK + ALL LANGUAGES - الجديد كلو هنا ============
-# --- 3A. كل موديلات Gemini - لو واحد فشل، التاني يشتغل ---
+# ============ 3. FLASH FALLBACK + ALL LANGUAGES ============
 GEMINI_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.0-flash",
@@ -70,17 +70,13 @@ GEMINI_MODELS = [
     "gemini-2.0-flash-exp",
 ]
 
-# --- 3B. قاموس كل اللغات - الدول الصناعية الكبرى ---
-# المفتاح = الكلمة بأي لغة، القيمة = المعنى بالعربي + انجليزي
 LANG_ALARMS = {
-    # فرنسي - French - شاشتك دي
     "avertis": "⚠️ تحذير / Warning (FR)",
     "alarme": "🚨 إنذار / Alarm (FR)",
     "avertissement": "⚠️ تحذير / Warning (FR)",
     "defaut": "❌ عطل / Fault (FR)",
     "disjoncteur": "🔌 قاطع / Breaker (FR)",
     "securite": "🛡️ أمان / Safety (FR)",
-    # ألماني - German
     "warnung": "⚠️ تحذير / Warning (DE)",
     "alarm": "🚨 إنذار / Alarm (DE/EN)",
     "fehler": "❌ عطل / Fault (DE)",
@@ -88,7 +84,6 @@ LANG_ALARMS = {
     "leistungsschalter": "🔌 قاطع / Breaker (DE)",
     "überlast": "⚡ حمل زائد / Overload (DE)",
     "überhitzung": "🔥 سخانة / Overheat (DE)",
-    # انجليزي - English
     "warning": "⚠️ تحذير / Warning (EN)",
     "safety breaker": "🚨 قاطع الأمان / Safety Breaker (EN) - القاطع فاصل، افحص القاطع والحمل",
     "safety": "🛡️ أمان / Safety (EN)",
@@ -103,7 +98,6 @@ LANG_ALARMS = {
     "low voltage": "⚡ فولت منخفض / Low Voltage - افحص AVR",
     "over voltage": "⚡ فولت عالي / Over Voltage",
     "fail": "🚫 فشل / Fail",
-    # عربي - Arabic
     "تحذير": "⚠️ تحذير / Warning (AR)",
     "إنذار": "🚨 إنذار / Alarm (AR)",
     "انذار": "🚨 إنذار / Alarm (AR)",
@@ -114,30 +108,22 @@ LANG_ALARMS = {
     "قاطع": "🔌 قاطع / Breaker (AR)",
     "أمان": "🛡️ أمان / Safety (AR)",
     "وقود": "⛽ وقود / Fuel (AR)",
-    # روسي - Russian
     "предупреждение": "⚠️ تحذير / Warning (RU)",
     "тревога": "🚨 إنذار / Alarm (RU)",
     "неисправность": "❌ عطل / Fault (RU)",
     "перегрузка": "⚡ حمل زائد / Overload (RU)",
     "перегрев": "🔥 سخانة / Overheat (RU)",
-    # صيني - Chinese
     "警告": "⚠️ تحذير / Warning (CN)",
     "报警": "🚨 إنذار / Alarm (CN)",
     "故障": "❌ عطل / Fault (CN)",
-    # ياباني - Japanese
-    "警告": "⚠️ تحذير / Warning (JP)",
     "アラーム": "🚨 إنذار / Alarm (JP)",
-    # إيطالي - Italian
     "avvertimento": "⚠️ تحذير / Warning (IT)",
     "allarme": "🚨 إنذار / Alarm (IT)",
     "guasto": "❌ عطل / Fault (IT)",
-    # اسباني - Spanish
     "advertencia": "⚠️ تحذير / Warning (ES)",
     "alarma": "🚨 إنذار / Alarm (ES)",
     "falla": "❌ عطل / Fault (ES)",
-    # تركي - Turkish
     "uyarı": "⚠️ تحذير / Warning (TR)",
-    "alarm": "🚨 إنذار / Alarm (TR)",
     "arıza": "❌ عطل / Fault (TR)",
 }
 
@@ -155,12 +141,10 @@ def detect_language_of_text(txt):
 def analyse_alarms(combined_text):
     low = combined_text.lower()
     alarms = []
-    # 1. فحص كل اللغات
     for key, meaning in LANG_ALARMS.items():
         if key.lower() in low:
             if meaning not in alarms:
                 alarms.append(meaning)
-    # 2. حالة خاصة - شاشتك الفرنسية
     if "avertis" in low and "safety breaker" in low:
         alarms.append("🚨 تشخيص خاص: AVERTIS + SAFETY BREAKER = قاطع الأمان فاصل - افحص القاطع الرئيسي والحمل قبل التشغيل - لا تشغل على حمل")
     if "an 1/1" in low or "an 1" in low:
@@ -179,11 +163,12 @@ def preprocess_image(pil_img):
     except:
         return pil_img
 
+# --- التحديث هنا - السطر 185 القديم اتغير كلو ---
 def call_gemini_with_fallback(pil_img, api_key):
-    # جرب كل الفلاشات بالترتيب، لو واحد فشل جرب البعدو
     import io
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
+    from google import genai
+    from google.genai import types
+    client = genai.Client(api_key=api_key)
     buf = io.BytesIO()
     pil_img.save(buf, format="PNG")
     img_data = buf.getvalue()
@@ -193,8 +178,13 @@ def call_gemini_with_fallback(pil_img, api_key):
     last_error = ""
     for model_name in GEMINI_MODELS:
         try:
-            model = genai.GenerativeModel(model_name)
-            resp = model.generate_content([prompt, {"mime_type": "image/png", "data": img_data}])
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=[
+                    types.Part.from_text(text=prompt),
+                    types.Part.from_bytes(data=img_data, mime_type="image/png")
+                ]
+            )
             return f"✅ Model used: {model_name}\n\n{resp.text}"
         except Exception as e:
             last_error = f"{model_name}: {e}"
@@ -203,17 +193,14 @@ def call_gemini_with_fallback(pil_img, api_key):
 
 def read_image_all_methods(pil_img, api_key=""):
     results = {}
-    # Tesseract - بكل اللغات
     try:
         import pytesseract
-        # eng + fra + deu + ara + rus + spa + ita + tur
         try:
             results["Tesseract (All Languages)"] = pytesseract.image_to_string(pil_img, lang="eng+fra+deu+ara+rus+spa+ita+tur")
         except:
             results["Tesseract"] = pytesseract.image_to_string(pil_img)
     except Exception as e:
         results["Tesseract"] = f"NOT_INSTALLED: {e}"
-    # Gemini - مع Fallback
     if api_key:
         try:
             results["Vision AI (Gemini - Fallback Chain)"] = call_gemini_with_fallback(pil_img, api_key)
@@ -259,7 +246,7 @@ else:
     menu = ["1. Universal Search - Text / Image / Catalog","2. Evidence Search","3. Result Verifier","4. Voltage Drop & Power","5. Fuel Consumption","6. Predictive Maintenance","7. Fault Diagnosis","8. Spare Parts & Oil Change","9. Predictive Failure Alert","10. PDF Report + Chart"]
 choice = st.sidebar.selectbox(T("اختر الميزة:", "Select Feature:"), menu)
 
-# ============ 6. FEATURE 1 - UNIVERSAL - كامل ============
+# ============ 6. FEATURE 1 - UNIVERSAL ============
 if choice.startswith("1."):
     st.header(T("1. البحث الشامل - الفيزياء الهندسية", "1. Universal Engineering Physics Search"))
     st.write(T("اكتب سؤالك، أو ارفع صورة، أو ارفع كتالوج - النتيجة حتكون شجرة كاملة", "Write question, or upload image, or upload catalog - Result will be full tree"))
@@ -286,7 +273,6 @@ if choice.startswith("1."):
                 pil = Image.open(img)
                 clean = preprocess_image(pil)
                 st.image(clean, caption=T("الصورة بعد التنظيف - تباين + حدة + تكبير", "Cleaned Image - Contrast + Sharpness + Zoom"), width=300)
-                # مفتاح آمن - بدون ما يوقف التطبيق لو ما في Secrets
                 key = api_key
                 if not key:
                     try:
@@ -305,7 +291,6 @@ if choice.startswith("1."):
                 except Exception as e:
                     st.info(T(f"قراءة الصورة - الخطأ: {e} - اكتب الأرقام المكتوبة في الشاشة", f"Image reading - Error: {e} - Write numbers on screen"))
                     ocr_text = q
-                # اللغة المكتشفة
                 st.info(T(f"🌐 اللغة المكتشفة: {detect_language_of_text(ocr_text + ' ' + q)}", f"🌐 Detected Language: {detect_language_of_text(ocr_text + ' ' + q)}"))
                 alarms = analyse_alarms(ocr_text + " " + q)
                 if alarms:
