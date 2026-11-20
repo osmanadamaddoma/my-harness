@@ -31,7 +31,6 @@ if choice == "1. Verify Question":
             import math
             current = 500 * 1000 / (math.sqrt(3) * 400)
             st.success("VERIFIED - Question is Valid")
-            st.write(f"Answer for 500 kVA Generator:")
             st.write(f"- Full Load Current = {current:.1f} A")
             st.write(f"- Recommended Cable: 2 x (3x185 mm2 Cu) per phase")
             st.write(f"- Breaker: 800 A")
