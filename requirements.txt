@@ -6,3 +6,4 @@ easyocr
 pytesseract
 google-generativeai
 numpy
+Pillow
