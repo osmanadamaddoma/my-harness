@@ -46,7 +46,6 @@ if choice == "1. Verify Question":
             st.success("VERIFIED - Question is Valid")
             st.write(f"Your Question: {q}")
             st.write("This is a valid engineering question. Use Feature 4 for cable calculation, or Feature 7 for fault diagnosis.")
-    if not q.strip():
         st.warning("Please enter a question first")
     elif "cable" in q.lower() and "500" in q:
         # 500 kVA Calculation - Real Answer
