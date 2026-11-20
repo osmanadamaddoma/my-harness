@@ -22,8 +22,6 @@ choice = st.sidebar.radio("Select Feature:", [
 ])
 st.title("My Harness - Engineering")
 if choice == "1. Verify Question":
-
-if choice == "1. Verify Question":
     st.header("1. Verify Question")
     q = st.text_input("Enter question")
     if st.button("Verify"):
