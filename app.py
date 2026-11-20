@@ -8,7 +8,7 @@ import time
 # + FIX 404 (remove exp/8b) + v1beta + ListModels + AUTO-ROTATE
 # + google.genai new SDK - NO FEATURE DELETED
 # + FIX: No more forced 500 kVA - Image only = Diagnosis only
-# + FIX: Language detection from ORIGINAL text only - not translation
+# + FIX 2: Language from Gemini Detected Language + Expanded English
 # ============================================================
 st.set_page_config(page_title="My Harness - Universal Engineering Physics", layout="wide")
 
@@ -100,33 +100,48 @@ LANG_ALARMS = {
 }
 
 def detect_language_of_text(txt):
-    # FIX متكامل: حدد اللغة من النص الاصلي فقط - قبل اي ترجمة
-    # لان Gemini يضيف ترجمة عربية في نفس النص، فكان يلخبط ويقول عربي
-    orig = txt or ""
-    # 1) لو في قسم Exact text - خدو هو الاصل
-    if "Exact text" in orig:
+    # FIX 2: اقرا سطر Gemini نفسه + النص الاصلي - بدون ترجمة
+    full = txt or ""
+    low_full = full.lower()
+    # 0) الادق: سطر Gemini - Detected Language: English / French / ... - قبل الترجمة
+    if "detected language" in low_full:
         try:
-            orig = orig.split("Exact text", 1)[1].split("Detected language", 1)[0].split("Translation", 1)[0]
+            seg = low_full.split("detected language", 1)[1][:120]
+            seg = seg.split("translation")[0]
+            if "french" in seg: return "🇫🇷 فرنسي / French - مثل شاشتك AVERTIS"
+            if "german" in seg or "deutsch" in seg: return "🇩🇪 ألماني / German"
+            if "arabic" in seg: return "🇸🇦 عربي / Arabic"
+            if "russian" in seg: return "🇷🇺 روسي / Russian"
+            if "chinese" in seg: return "🇨🇳 صيني / Chinese"
+            if "japanese" in seg: return "🇯🇵 ياباني / Japanese"
+            if "italian" in seg: return "🇮🇹 ايطالي / Italian"
+            if "spanish" in seg: return "🇪🇸 اسباني / Spanish"
+            if "turkish" in seg: return "🇹🇷 تركي / Turkish"
+            if "english" in seg: return "🇬🇧 انجليزي / English"
         except:
             pass
-    # 2) اقطع اي ترجمة - Translation / ترجمة / Arabic: / English: بعد النص الاصلي
-    for sep in ["Translation", "ترجمة", "### 3.", "3) Translation", "Arabic:", "**Arabic:**"]:
+    orig = full
+    if "exact text" in low_full:
+        try:
+            rest = full[low_full.find("exact text")+len("exact text"): ]
+            low_rest = rest.lower()
+            if "detected language" in low_rest: rest = rest[:low_rest.find("detected language")]
+            if "translation" in rest.lower(): rest = rest[:rest.lower().find("translation")]
+            orig = rest
+        except:
+            pass
+    for sep in ["Translation", "ترجمة", "Arabic:", "**Arabic:**"]:
         if sep in orig:
-            # لا تقطع لو النص كلو عربي اصلا - فقط لو النص قبل الفاصل فيه حروف لاتينية/فرنسية
             before = orig.split(sep, 1)[0]
             if len(before.strip()) > 10:
                 orig = before
                 break
-    # 3) خذ اول 800 حرف فقط - النص الاصلي - تجاهل باقي الترجمة
     orig = orig[:800]
     low = orig.lower()
-    # 4) اولوية صارمة: فرنسي اولا - لان AVERTIS / ALARME فرنسي خالص
     if any(x in low for x in ["avertis", "alarme", "avertissement", "defaut", "défaut", "disjoncteur", "securite", "sécurité", "panne", "arret", "arrêt"]):
         return "🇫🇷 فرنسي / French - مثل شاشتك AVERTIS"
-    if any(x in low for x in ["warnung", "fehler", "sicherheit", "leistungsschalter", "überlast", "überhitzung", "störung", "alarm"]):
-        # alarm وحدها انجليزي - لكن مع كلمات المانية = الماني
-        if any(x in low for x in ["warnung", "fehler", "sicherheit", "leistungsschalter", "überlast", "überhitzung", "störung"]):
-            return "🇩🇪 ألماني / German"
+    if any(x in low for x in ["warnung", "fehler", "sicherheit", "leistungsschalter", "überlast", "überhitzung", "störung"]):
+        return "🇩🇪 ألماني / German"
     if any(x in orig for x in ["предупреждение", "тревога", "неисправность", "перегрузка", "перегрев", "авария"]):
         return "🇷🇺 روسي / Russian"
     if any(x in orig for x in ["警告", "报警", "故障", "过载", "过热"]):
@@ -137,16 +152,11 @@ def detect_language_of_text(txt):
         return "🇮🇹 ايطالي / Italian"
     if any(x in orig for x in ["advertencia", "alarma", "falla", "sobrecarga"]):
         return "🇪🇸 اسباني / Spanish"
-    if any(x in orig for x in ["uyarı", "arıza", "alarm", "aşırı"]):
-        # uyarı / arıza تركي - alarm وحدها لا تكفي
-        if any(x in orig for x in ["uyarı", "arıza"]):
-            return "🇹🇷 تركي / Turkish"
-    # 5) عربي - فقط لو النص الاصلي نفسه عربي - مش الترجمة
+    if any(x in orig for x in ["uyarı", "arıza"]):
+        return "🇹🇷 تركي / Turkish"
     if any(x in orig for x in ["تحذير", "إنذار", "انذار", "زيت", "قاطع", "سخانة", "حرارة", "بطارية", "وقود", "عطل"]):
         return "🇸🇦 عربي / Arabic"
-    # 6) انجليزي - اخر واحد - لان SAFETY BREAKER انجليزي لكن الشاشة فرنسية
-    # لو في فرنسي فوق رجعنا فرنسي - لو وصلنا هنا يعني ما في فرنسي
-    if any(x in low for x in ["warning", "alarm", "breaker", "safety", "fault", "overload", "overheat", "low oil", "high temp"]):
+    if any(x in low for x in ["warning", "alarm", "breaker", "safety", "fault", "overload", "overheat", "low oil", "high temp", "ecu", "dtc", "j1939", "deep sea", "electronics", "abnormal update", "current dtc", "network", "sae"]):
         return "🇬🇧 انجليزي / English"
     return "🌐 لغة غير محددة / Unknown"
 
