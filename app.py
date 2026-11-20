@@ -120,6 +120,34 @@ def analyse_alarms(combined_text):
         alarms.append("📋 AN 1/1 = إنذار رقم 1 من 1")
     return alarms
 
+# ============================================================
+# دالة التوظيف - توظيف نتيجة القراءة في تشخيص عملي
+# تربط AVERTIS + SPN 1231 + J1939 + DSE في تشخيص واحد
+# ============================================================
+def diagnose_dtc_code(combined_text):
+    low = combined_text.lower()
+    diags = []
+    if "avertis" in low:
+        diags.append({"code": "AVERTIS", "title": "AVERTIS - تحذير فرنسي", "cause": "قاطع الامان SAFETY BREAKER فاصل", "action": "1. اوقف المولد 2. افحص القاطع الرئيسي 3. افحص الحمل - هل في شورت؟ 4. قيس العزل 5. اعد تشغيل القاطع", "risk": "عالي - لا تشغل على حمل قبل الفحص"})
+    if "1231" in low or "j1939" in low:
+        diags.append({"code": "SPN 1231 / FMI 9", "title": "J1939 Network #2 - Abnormal Update Rate", "cause": "اشارة CAN Bus متقطعة بين ECU وشاشة DSE", "action": "1. افحص سلك CAN (اصفر/اخضر) 2. افحص فيشة ECU و DSE 3. قيس المقاومة بين السلكين = لازم 60 اوم 4. افحص الارضي 5. نظف الفيشات بـ Contact Cleaner", "risk": "متوسط - الشاشة ما بتقرا حرارة وضغط الزيت صح"})
+    if "fmi=9" in low or "fmi 9" in low or "abnormal update" in low:
+        diags.append({"code": "FMI 9", "title": "Abnormal Update Rate - اشارة متقطعة", "cause": "سلك مرخي او مقطوع او قريب من كيبل قوي", "action": "افحص السلك والفيشة، ابعد سلك CAN عن كيبلات القدرة", "risk": "متوسط"})
+    if "dse" in low or "deep sea" in low:
+        diags.append({"code": "DSE", "title": "Deep Sea Electronics", "cause": "وحدة تحكم DSE", "action": "امسح الكود من الشاشة بعد الاصلاح: DSE > Alarm > Reset", "risk": "معلومة"})
+    return diags
+
+def show_diagnosis(combined_text):
+    diags = diagnose_dtc_code(combined_text)
+    if not diags:
+        return
+    st.subheader("🩺 التشخيص المفصل - Detailed Diagnosis")
+    for d in diags:
+        st.error(f"**{d['code']} - {d['title']}**")
+        st.write(f"- **السبب:** {d['cause']}")
+        st.write(f"- **الاجراء:** {d['action']}")
+        st.write(f"- **الخطر:** {d['risk']}")
+
 def preprocess_image(pil_img):
     try:
         from PIL import ImageEnhance
@@ -290,6 +318,7 @@ if choice.startswith("1."):
                 if alarms:
                     st.error(T("**الإنذارات المكتشفة في الصورة - بكل اللغات:**", "**Alarms Detected - All Languages:**"))
                     for a in alarms: st.write(f"- {a}")
+                    show_diagnosis(ocr_text + " " + q)
                 deep_search_real(q, ocr_text)
                 st.subheader(T("📊 نتيجة المطابقة - Matching", "📊 Matching Result"))
                 combined_all = (ocr_text + " " + q).lower()
